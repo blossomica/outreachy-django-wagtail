@@ -28,19 +28,19 @@ from reversion.models import Version
 
 from timezone_field.fields import TimeZoneField
 
-from wagtail.wagtailcore.models import Orderable
-from wagtail.wagtailcore.models import Page
-from wagtail.wagtailcore.fields import RichTextField
-from wagtail.wagtailcore.fields import StreamField
-from wagtail.wagtailadmin.edit_handlers import FieldPanel
-from wagtail.wagtailadmin.edit_handlers import InlinePanel
-from wagtail.wagtailcore import blocks
-from wagtail.wagtailadmin.edit_handlers import StreamFieldPanel
-from wagtail.wagtailimages.edit_handlers import ImageChooserPanel
-from wagtail.wagtailimages.blocks import ImageChooserBlock
+from wagtail.core.models import Orderable
+from wagtail.core.models import Page
+from wagtail.core.fields import RichTextField
+from wagtail.core.fields import StreamField
+from wagtail.admin.edit_handlers import FieldPanel
+from wagtail.admin.edit_handlers import InlinePanel
+from wagtail.core import blocks
+from wagtail.admin.edit_handlers import StreamFieldPanel
+from wagtail.images.edit_handlers import ImageChooserPanel
+from wagtail.images.blocks import ImageChooserBlock
 from wagtail.contrib.table_block.blocks import TableBlock
-from wagtail.contrib.wagtailroutablepage.models import RoutablePageMixin, route
-from wagtail.wagtailembeds.blocks import EmbedBlock
+from wagtail.contrib.routable_page.models import RoutablePageMixin, route
+from wagtail.embeds.blocks import EmbedBlock
 
 from . import email
 from .feeds import WagtailFeed
@@ -613,7 +613,7 @@ def make_comrade_photo_filename(instance, original_name):
 # comrade: A person who shares one's interests or activities; a friend or companion.
 # user: One who uses addictive drugs.
 class Comrade(models.Model):
-    account = models.OneToOneField(User, primary_key=True)
+    account = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE,)
     public_name = models.CharField(max_length=LONG_LEGAL_NAME, verbose_name="Name (public)", help_text="Your full name, which will be publicly displayed on the Outreachy website. This is typically your given name, followed by your family name. You may use a pseudonym or abbreviate your given or family names if you have concerns about privacy.")
 
     nick_name = models.CharField(max_length=SHORT_NAME, verbose_name="Nick name (internal)", help_text="The short name used in emails to you. You would use this name when introducing yourself to a new person, such as 'Hi, I'm (nick name)'. Emails will be addressed 'Hi (nick name)'. This name will be shown to organizers, coordinators, mentors, and volunteers.")
@@ -1235,8 +1235,8 @@ class Community(models.Model):
                 community=self).interns_funded()
 
 class Notification(models.Model):
-    community = models.ForeignKey(Community)
-    comrade = models.ForeignKey(Comrade)
+    community = models.ForeignKey(Community, on_delete=models.CASCADE)
+    comrade = models.ForeignKey(Comrade, on_delete=models.CASCADE)
     # Ok, look, this is silly, and we don't actually need the date,
     # but I don't know what view to use to modify a through field on a model.
     date_of_signup = models.DateField("Date user signed up for notifications", auto_now_add=True)
@@ -1246,7 +1246,7 @@ class Notification(models.Model):
                 )
 
 class NewCommunity(Community):
-    community = models.OneToOneField(Community, primary_key=True, parent_link=True)
+    community = models.OneToOneField(Community, primary_key=True, parent_link=True, on_delete=models.CASCADE)
 
     SMOL = '3'
     TINY = '5'
@@ -1322,8 +1322,8 @@ class NewCommunity(Community):
         verbose_name_plural = 'new communities'
 
 class Participation(ApprovalStatus):
-    community = models.ForeignKey(Community)
-    participating_round = models.ForeignKey(RoundPage)
+    community = models.ForeignKey(Community, on_delete=models.CASCADE)
+    participating_round = models.ForeignKey(RoundPage, on_delete=models.CASCADE)
 
     def __str__(self):
         return '{start:%Y %B} to {end:%Y %B} round - {community}'.format(
@@ -1501,7 +1501,7 @@ class Sponsorship(models.Model):
                 community=self.participation.community)
 
 class Project(ApprovalStatus):
-    project_round = models.ForeignKey(Participation, verbose_name="Outreachy round and community")
+    project_round = models.ForeignKey(Participation, on_delete=models.CASCADE, verbose_name="Outreachy round and community")
     mentors = models.ManyToManyField(Comrade, through='MentorApproval')
 
     THREE_MONTHS = '3M'
@@ -1768,7 +1768,7 @@ class Project(ApprovalStatus):
                 )
 
 class ProjectSkill(models.Model):
-    project = models.ForeignKey(Project, verbose_name="Project")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, verbose_name="Project")
 
     skill = models.CharField(max_length=SENTENCE_LENGTH, verbose_name="Skill description", help_text="What is one skill an the applicant needs to have in order to contribute to this internship project, or what skill will they need to be willing to learn?")
 
@@ -2081,8 +2081,8 @@ def create_time_commitment_calendar(tcs, application_round):
     return calendar
 
 class ApplicationReviewer(ApprovalStatus):
-    comrade = models.ForeignKey(Comrade)
-    reviewing_round = models.ForeignKey(RoundPage)
+    comrade = models.ForeignKey(Comrade, on_delete=models.CASCADE)
+    reviewing_round = models.ForeignKey(RoundPage, on_delete=models.CASCADE)
 
 # This class stores information about whether an applicant is eligible to
 # participate in this round Automated checking will set the applicant to
@@ -2098,7 +2098,7 @@ class ApplicantApproval(ApprovalStatus):
     project_contributions = models.ManyToManyField(Project, through='Contribution')
     submission_date = models.DateField(auto_now_add=True)
     ip_address = models.GenericIPAddressField(protocol="both")
-    review_owner = models.ForeignKey(ApplicationReviewer, blank=True, null=True)
+    review_owner = models.ForeignKey(ApplicationReviewer, blank=True, null=True, on_delete=models.CASCADE)
 
     def is_approver(self, user):
         return user.is_staff
@@ -2887,8 +2887,8 @@ class PromotionTracking(models.Model):
 # --------------------------------------------------------------------------- #
 
 class InitialApplicationReview(models.Model):
-    application = models.ForeignKey(ApplicantApproval)
-    reviewer = models.ForeignKey(ApplicationReviewer)
+    application = models.ForeignKey(ApplicantApproval, on_delete=models.CASCADE)
+    reviewer = models.ForeignKey(ApplicationReviewer, on_delete=models.CASCADE)
 
     STRONG = '+3'
     GOOD = '+2'
@@ -2983,8 +2983,8 @@ class InitialApplicationReview(models.Model):
 # --------------------------------------------------------------------------- #
 
 class Contribution(models.Model):
-    applicant = models.ForeignKey(ApplicantApproval)
-    project = models.ForeignKey(Project)
+    applicant = models.ForeignKey(ApplicantApproval, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
 
     date_started = models.DateField(verbose_name="Date contribution was started (in YYYY-MM-DD format)")
     date_merged = models.DateField(verbose_name="Date contribution was accepted or merged (in YYYY-MM-DD format)",
@@ -3019,8 +3019,8 @@ class Contribution(models.Model):
                 )
 
 class FinalApplication(ApprovalStatus):
-    applicant = models.ForeignKey(ApplicantApproval)
-    project = models.ForeignKey(Project)
+    applicant = models.ForeignKey(ApplicantApproval, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
 
     experience = models.TextField(
             max_length=EIGHT_PARAGRAPH_LENGTH,
@@ -3197,8 +3197,8 @@ class SignedContract(models.Model):
     date_signed = models.DateField(verbose_name="Date contract was signed in YYYY-MM-DD format")
 
 class InternSelection(models.Model):
-    applicant = models.ForeignKey(ApplicantApproval)
-    project = models.ForeignKey(Project)
+    applicant = models.ForeignKey(ApplicantApproval, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     intern_contract = models.OneToOneField(SignedContract, null=True, blank=True, on_delete=models.SET_NULL)
     mentors = models.ManyToManyField(MentorApproval, through='MentorRelationship')
 
@@ -3295,9 +3295,9 @@ class InternSelection(models.Model):
         return self.mentor_names() + ' mentoring ' + self.applicant.applicant.public_name
 
 class MentorRelationship(models.Model):
-    intern_selection = models.ForeignKey(InternSelection)
-    mentor = models.ForeignKey(MentorApproval)
-    contract = models.OneToOneField(SignedContract)
+    intern_selection = models.ForeignKey(InternSelection, on_delete=models.CASCADE)
+    mentor = models.ForeignKey(MentorApproval, on_delete=models.CASCADE,)
+    contract = models.OneToOneField(SignedContract, on_delete=models.CASCADE,)
 
     def intern_name(self):
         return self.intern_selection.applicant.applicant.public_name
@@ -3339,7 +3339,7 @@ class AlumSurvey(models.Model):
     # or someone who has an account and was selected as an intern through the website.
 
     survey_date = models.DateTimeField(default=datetime.date.today)
-    survey_tracker = models.ForeignKey(AlumSurveyTracker)
+    survey_tracker = models.ForeignKey(AlumSurveyTracker, on_delete=models.CASCADE)
 
     RECOMMEND1 = '1'
     RECOMMEND2 = '2'

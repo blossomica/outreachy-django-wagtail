@@ -1,4 +1,4 @@
-from wagtail.wagtailcore.models import Page
+from wagtail.core.models import Page
 from .models import ApprovalStatus, DASHBOARD_MODELS
 
 def header(request):
